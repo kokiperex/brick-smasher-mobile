@@ -4,9 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
     <meta name="theme-color" content="#071326">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Neon Breaker">
     <title>Neon Breaker</title>
-    <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="css/styles.css?v=overlay-title-fix">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="assets/icons/icon-512.png">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+    <link rel="stylesheet" href="css/styles.css">
   </head>
   <body>
     <main class="app-shell">
@@ -145,22 +152,22 @@
     </aside>
 
     <script src="js/ball.js"></script>
-    <script src="js/paddle.js?v=mobile-audit"></script>
+    <script src="js/paddle.js"></script>
     <script src="js/brick.js"></script>
     <script src="js/effect-catalog.js"></script>
     <script src="js/falling-item.js"></script>
     <script src="js/falling-object-system.js"></script>
     <script src="js/projectile.js"></script>
-    <script src="js/collision-system.js?v=mobile-audit"></script>
+    <script src="js/collision-system.js"></script>
     <script src="js/levels.js"></script>
     <script src="js/level-manager.js"></script>
-    <script src="js/input-manager.js?v=mobile-audit"></script>
+    <script src="js/input-manager.js"></script>
     <script src="js/effect-manager.js"></script>
-    <script src="js/audio-manager.js?v=mobile-audit"></script>
-    <script src="js/vibration-manager.js?v=mobile-audit"></script>
+    <script src="js/audio-manager.js"></script>
+    <script src="js/vibration-manager.js"></script>
     <script src="js/storage-manager.js"></script>
-    <script src="js/game-loop.js?v=mobile-audit"></script>
-    <script src="js/game.js?v=overlay-title-fix"></script>
-    <script src="js/main.js?v=mobile-audit"></script>
+    <script src="js/game-loop.js"></script>
+    <script src="js/game.js"></script>
+    <script src="js/main.js"></script>
   </body>
 </html>

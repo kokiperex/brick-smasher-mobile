@@ -82,6 +82,28 @@ Probar `320×568`, `375×667`, `390×844`, `430×932` y `844×390`:
 La evidencia dimensional y las correcciones se documentan en
 `docs/MOBILE_AUDIT.md`.
 
+## Base PWA
+
+La suite también valida de forma estática que `manifest.webmanifest` exista,
+sea JSON válido, use `start_url` y `scope` relativos, declare modo
+`standalone`, colores de tema y fondo, y apunte a iconos PNG locales de 192 y
+512 píxeles, incluida una variante `maskable`. También confirma que
+`index.html` enlaza el manifiesto y los iconos instalables. La validación PWA
+comprueba además que no haya query strings en recursos locales, que
+`service-worker.js`
+precachee el HTML, CSS, scripts, manifiesto e iconos, use un caché versionado
+y se registre solo en un contexto seguro para preservar `file://`. También
+comprueba que las rutas precacheadas existan, no contengan query strings y que
+el worker solo gestione la navegación de la aplicación y recursos cacheados;
+las APIs y el audio quedan fuera de su interceptación. Los recursos se derivan
+de las referencias reales de `index.html` y del manifiesto, sin navegador.
+
+Limitación del entorno: Node puede comprobar archivos, rutas y cabeceras PNG,
+pero no puede confirmar la instalación real de una PWA, el contenido de Cache
+Storage, el ciclo de vida del service worker ni el comportamiento de Safari.
+Esas comprobaciones requieren una prueba manual servida mediante HTTPS o
+`localhost`, seguida de una recarga en modo avión.
+
 ## Pantallas de estado
 
 - **NEON BREAKER** debe conservar el título grande en dos líneas.

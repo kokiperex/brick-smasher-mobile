@@ -34,6 +34,19 @@ function test(name, callback) {
   tests.push({ name, callback });
 }
 
+function readPngDimensions(relativePath) {
+  const data = fs.readFileSync(path.join(projectRoot, relativePath));
+  assert.equal(data.subarray(0, 8).toString("hex"), "89504e470d0a1a0a");
+  return {
+    width: data.readUInt32BE(16),
+    height: data.readUInt32BE(20),
+  };
+}
+
+function isRelativeLocalPath(value) {
+  return !value.startsWith("/") && !/^[a-z][a-z0-9+.-]*:/i.test(value);
+}
+
 test("LevelManager carga exactamente los 40 niveles definitivos", () => {
   const manager = new LevelManager(LEVELS, Brick, 360);
   assert.equal(manager.total, 40);
@@ -698,6 +711,144 @@ test("index.html conserva todas sus dependencias locales ejecutables", () => {
       true,
       `Falta la dependencia local ${source}`,
     );
+  }
+});
+
+test("la base PWA declara manifiesto, iconos locales y rutas compatibles con GitHub Pages", () => {
+  const manifestPath = path.join(projectRoot, "manifest.webmanifest");
+  const html = fs.readFileSync(path.join(projectRoot, "index.html"), "utf8");
+  assert.equal(fs.existsSync(manifestPath), true, "Falta manifest.webmanifest");
+
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  assert.equal(manifest.start_url, "./");
+  assert.equal(manifest.scope, "./");
+  assert.equal(isRelativeLocalPath(manifest.start_url), true);
+  assert.equal(isRelativeLocalPath(manifest.scope), true);
+  assert.equal(manifest.display, "standalone");
+  assert.equal(manifest.theme_color, "#071326");
+  assert.equal(manifest.background_color, "#030916");
+
+  const icon192 = manifest.icons.find((icon) => icon.sizes === "192x192");
+  const icon512 = manifest.icons.find(
+    (icon) => icon.sizes === "512x512" && icon.purpose === "any",
+  );
+  const maskableIcon = manifest.icons.find(
+    (icon) => icon.sizes === "512x512" && icon.purpose === "maskable",
+  );
+  assert.ok(icon192, "Falta el icono PWA de 192x192");
+  assert.ok(icon512, "Falta el icono PWA de 512x512");
+  assert.ok(maskableIcon, "Falta el icono PWA maskable de 512x512");
+
+  for (const icon of [icon192, icon512, maskableIcon]) {
+    assert.equal(icon.type, "image/png");
+    assert.equal(isRelativeLocalPath(icon.src), true, `${icon.src} no es una ruta relativa`);
+    assert.equal(fs.existsSync(path.join(projectRoot, icon.src)), true, `Falta ${icon.src}`);
+    const dimensions = readPngDimensions(icon.src);
+    const [width, height] = icon.sizes.split("x").map(Number);
+    assert.deepEqual(dimensions, { width, height });
+  }
+
+  assert.match(html, /<link rel="manifest" href="manifest\.webmanifest">/);
+  assert.match(
+    html,
+    new RegExp(`<link rel="icon"[^>]+href="${icon192.src}">`),
+  );
+  assert.match(
+    html,
+    new RegExp(`<link rel="icon"[^>]+href="${icon512.src}">`),
+  );
+  assert.match(html, /<link rel="apple-touch-icon" href="assets\/icons\/icon-192\.png">/);
+});
+
+test("la base PWA precachea los recursos de inicio y registra el worker sin navegador", () => {
+  const html = fs.readFileSync(path.join(projectRoot, "index.html"), "utf8");
+  const main = fs.readFileSync(path.join(projectRoot, "js/main.js"), "utf8");
+  const serviceWorkerPath = path.join(projectRoot, "service-worker.js");
+  assert.equal(fs.existsSync(serviceWorkerPath), true, "Falta service-worker.js");
+  const worker = fs.readFileSync(serviceWorkerPath, "utf8");
+  const manifestMatch = html.match(/<link rel="manifest" href="([^"]+)">/);
+  assert.ok(manifestMatch, "index.html debe enlazar el manifiesto");
+  const manifestPath = manifestMatch[1];
+  const manifest = JSON.parse(fs.readFileSync(path.join(projectRoot, manifestPath), "utf8"));
+  const scriptPaths = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)]
+    .map((match) => match[1]);
+  const stylesheetPaths = [...html.matchAll(
+    /<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/g,
+  )].map((match) => match[1]);
+  const htmlIconPaths = [...html.matchAll(
+    /<link[^>]+rel="(?:icon|apple-touch-icon)"[^>]+href="([^"]+)"/g,
+  )].map((match) => match[1]);
+  const requiredStartupPaths = new Set([
+    "index.html",
+    manifestPath,
+    ...stylesheetPaths,
+    ...scriptPaths,
+    ...htmlIconPaths,
+    ...manifest.icons.map((icon) => icon.src),
+  ]);
+
+  assert.doesNotMatch(html, /(?:src|href)="[^"]+\?[^"]*"/);
+  assert.doesNotMatch(html, /(?:src|href)="(?:https?:)?\/\//i);
+  assert.match(worker, /const CACHE_PREFIX = "neon-breaker-static-"/);
+  assert.match(worker, /const CACHE_VERSION = "v\d+"/);
+  assert.match(worker, /worker\.addEventListener\("install"/);
+  assert.match(worker, /worker\.addEventListener\("activate"/);
+  assert.match(worker, /cache\.addAll\(PRECACHE_URLS\)/);
+  assert.match(worker, /caches\.keys\(\)/);
+  assert.match(worker, /cacheName\.startsWith\(CACHE_PREFIX\) && cacheName !== CACHE_NAME/);
+  assert.match(worker, /caches\.delete\(cacheName\)/);
+  assert.match(worker, /const resolveFromScope = \(relativePath\) => new URL\(/);
+  assert.match(worker, /cacheKey\.search = ""/);
+  assert.match(worker, /const isPrecachedRequest = PRECACHE_URL_SET\.has\(cacheKey\)/);
+  assert.match(worker, /const isAppNavigation = request\.mode === "navigate"/);
+  assert.match(worker, /if \(!isPrecachedRequest && !isAppNavigation\)/);
+  assert.match(worker, /request\.destination === "audio"/);
+  assert.match(worker, /requestUrl\.origin !== worker\.location\.origin/);
+  assert.match(worker, /const APP_SHELL_URL = resolveFromScope\("\.\/index\.html"\)/);
+  assert.match(worker, /if \(isAppNavigation\)[\s\S]*?caches\.match\(APP_SHELL_URL\)/);
+  assert.match(worker, /caches\.match\(APP_SHELL_URL\)/);
+  assert.doesNotMatch(worker, /skipWaiting\(/);
+
+  for (const resource of requiredStartupPaths) {
+    assert.equal(isRelativeLocalPath(resource), true, `${resource} no puede ser externo`);
+    assert.doesNotMatch(resource, /[?#]/, `El recurso no debe versionar ${resource}`);
+    assert.equal(
+      worker.includes(`"./${resource}"`),
+      true,
+      `El precache no incluye ${resource}`,
+    );
+    assert.equal(
+      fs.existsSync(path.join(projectRoot, resource)),
+      true,
+      `Falta el recurso precacheado ${resource}`,
+    );
+  }
+
+  assert.match(main, /"serviceWorker" in navigator/);
+  assert.match(main, /const isLocalhost = \[/);
+  assert.match(main, /window\.location\.protocol !== "https:" && !isLocalhost/);
+  assert.match(main, /new URL\("\.\.\/service-worker\.js", currentScriptUrl\)/);
+  assert.match(main, /new URL\("\.\/", workerUrl\)/);
+  assert.match(
+    main,
+    /navigator\.serviceWorker\.register\(workerUrl\.href, \{[\s\S]*?scope: scopeUrl\.href,[\s\S]*?updateViaCache: "none"/,
+  );
+
+  const githubMainUrl = new URL(
+    "https://kokiperex.github.io/brick-smasher-mobile/js/main.js",
+  );
+  const localhostMainUrl = new URL("http://127.0.0.1:4173/js/main.js");
+  for (const [mainUrl, expectedWorkerPath, expectedScopePath] of [
+    [
+      githubMainUrl,
+      "/brick-smasher-mobile/service-worker.js",
+      "/brick-smasher-mobile/",
+    ],
+    [localhostMainUrl, "/service-worker.js", "/"],
+  ]) {
+    const workerUrl = new URL("../service-worker.js", mainUrl);
+    assert.equal(workerUrl.pathname, expectedWorkerPath);
+    assert.equal(new URL("./", workerUrl).pathname, expectedScopePath);
   }
 });
 
