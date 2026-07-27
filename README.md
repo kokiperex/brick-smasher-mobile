@@ -124,7 +124,7 @@ Ejecuta desde la raíz del proyecto:
 node tests/run-tests.js
 ```
 
-La suite de 56 pruebas comprueba los 40 niveles, bloques rompibles, patrones duplicados,
+La suite de 58 pruebas comprueba los 40 niveles, bloques rompibles, patrones duplicados,
 fórmula y curva de dificultad, construcción de bloques, progresión de
 velocidad, colisiones, reflexión, rebote en la plataforma,
 velocidad de lanzamiento, condición de fin de nivel, paso fijo del loop y
@@ -140,6 +140,35 @@ La fórmula, los símbolos y la tabla completa de scores están documentados en
 
 Los tamaños auditados, hallazgos y validaciones móviles están documentados en
 `docs/MOBILE_AUDIT.md`.
+
+## Uso sin conexión
+
+El modo sin conexión requiere una primera visita desde HTTPS o un servidor
+local. Sigue estos pasos:
+
+1. Desde la raíz del proyecto, inicia un servidor local:
+
+   ```bash
+   python3 -m http.server 8080
+   ```
+
+2. Abre `http://localhost:8080` con conexión activa y espera a que cargue el
+   juego una vez.
+3. Abre las DevTools del navegador y confirma, en **Application** → **Service
+   Workers**, que `service-worker.js` esté activo y controle la página.
+4. En DevTools, abre **Network** y activa **Offline**.
+5. Recarga la página e inicia una partida: el juego debe seguir cargando y ser
+   jugable sin red.
+6. Revisa que `localStorage` conserva la configuración de sonido, vibración y
+   modo de control, además del progreso de campaña y la puntuación máxima.
+
+El service worker guarda el juego y sus recursos locales con una caché
+versionada. Las actualizaciones se aplican al reabrir la aplicación para no
+interrumpir una partida en curso.
+
+Abrir `index.html` mediante `file://` permite jugar directamente, pero los
+navegadores no autorizan registrar un service worker desde ese protocolo. Para
+probar el caché offline usa HTTPS o `localhost`.
 
 ## Publicación en GitHub Pages
 
