@@ -1,0 +1,11 @@
+.DS_Store
+**/.DS_Store
+.env
+.env.*
+*.log
+node_modules/
+
+# Material de referencia local que no forma parte del juego publicado.
+reference/
+AGENTS.md
+docs/PRODUCT_SPEC.md

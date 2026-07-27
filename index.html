@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover">
+    <meta name="theme-color" content="#071326">
+    <title>Neon Breaker</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="css/styles.css?v=overlay-title-fix">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="hud" aria-label="Estado de la partida">
+        <div class="hud-stat">
+          <span class="hud-label">PUNTOS</span>
+          <strong id="scoreValue">000000</strong>
+        </div>
+        <div class="hud-stat hud-stat--center">
+          <span class="hud-label">NIVEL</span>
+          <strong id="levelValue">1 / 40</strong>
+        </div>
+        <div class="hud-stat hud-stat--lives">
+          <span class="hud-label">VIDAS</span>
+          <strong id="livesValue" aria-label="3 vidas">● ● ●</strong>
+        </div>
+        <button
+          id="settingsButton"
+          class="icon-button"
+          type="button"
+          aria-label="Abrir ajustes"
+          aria-controls="settingsPanel"
+          aria-expanded="false"
+        >
+          <span aria-hidden="true">⚙</span>
+        </button>
+        <button id="pauseButton" class="icon-button" type="button" aria-label="Pausar partida" disabled>
+          <span aria-hidden="true">Ⅱ</span>
+        </button>
+      </header>
+
+      <section id="gameStage" class="game-stage" aria-label="Área de juego">
+        <canvas
+          id="gameCanvas"
+          width="360"
+          height="600"
+          tabindex="0"
+          aria-label="Neon Breaker. Desliza o usa flechas y A/D para mover la plataforma. Toca o pulsa Espacio para lanzar."
+        ></canvas>
+
+        <div id="effectsPanel" class="effects-panel" hidden></div>
+        <div
+          id="effectAnnouncements"
+          class="sr-only"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        ></div>
+
+        <button
+          id="fireButton"
+          class="fire-button"
+          type="button"
+          aria-label="Disparar proyectiles"
+          hidden
+        >
+          <span aria-hidden="true">▲</span>
+          FUEGO
+        </button>
+
+        <div
+          id="screenOverlay"
+          class="screen-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="overlayTitle"
+          aria-describedby="overlayMessage"
+        >
+          <div class="panel">
+            <p id="overlayEyebrow" class="panel-eyebrow">ARCADE MÓVIL</p>
+            <h1 id="overlayTitle">NEON<br>BREAKER</h1>
+            <p id="overlayMessage">
+              Rompe todos los bloques.<br>
+              Desliza para mover la plataforma.
+            </p>
+            <button id="overlayButton" class="primary-button" type="button">JUGAR</button>
+          </div>
+        </div>
+
+        <p id="launchHint" class="launch-hint" hidden>TOCA PARA LANZAR</p>
+      </section>
+
+      <div id="settingsPanel" class="settings-overlay" hidden>
+        <section
+          class="settings-card"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="settingsTitle"
+        >
+          <p class="panel-eyebrow">PREFERENCIAS</p>
+          <h2 id="settingsTitle">AJUSTES</h2>
+
+          <button
+            id="controlModeButton"
+            class="setting-toggle"
+            type="button"
+            aria-pressed="false"
+          >
+            CONTROL: DIRECTO
+          </button>
+          <p id="controlModeHelp" class="setting-help">
+            La plataforma sigue la posición horizontal del dedo.
+          </p>
+
+          <div class="settings-actions">
+            <button
+              id="soundButton"
+              class="setting-toggle"
+              type="button"
+              aria-pressed="true"
+            >
+              SONIDO: SÍ
+            </button>
+            <button
+              id="vibrationButton"
+              class="setting-toggle"
+              type="button"
+              aria-pressed="true"
+            >
+              VIBRACIÓN: SÍ
+            </button>
+          </div>
+
+          <button id="closeSettingsButton" class="primary-button" type="button">
+            CERRAR
+          </button>
+        </section>
+      </div>
+    </main>
+
+    <aside id="debugPanel" class="debug-panel" aria-label="Panel de depuración de efectos" hidden>
+      <strong>DEBUG · OBJETOS</strong>
+      <p>Generar sobre la plataforma:</p>
+      <div id="debugButtons" class="debug-buttons"></div>
+      <output id="debugStatus">Bolas: 0 · Objetos: 0</output>
+    </aside>
+
+    <script src="js/ball.js"></script>
+    <script src="js/paddle.js?v=mobile-audit"></script>
+    <script src="js/brick.js"></script>
+    <script src="js/effect-catalog.js"></script>
+    <script src="js/falling-item.js"></script>
+    <script src="js/falling-object-system.js"></script>
+    <script src="js/projectile.js"></script>
+    <script src="js/collision-system.js?v=mobile-audit"></script>
+    <script src="js/levels.js"></script>
+    <script src="js/level-manager.js"></script>
+    <script src="js/input-manager.js?v=mobile-audit"></script>
+    <script src="js/effect-manager.js"></script>
+    <script src="js/audio-manager.js?v=mobile-audit"></script>
+    <script src="js/vibration-manager.js?v=mobile-audit"></script>
+    <script src="js/storage-manager.js"></script>
+    <script src="js/game-loop.js?v=mobile-audit"></script>
+    <script src="js/game.js?v=overlay-title-fix"></script>
+    <script src="js/main.js?v=mobile-audit"></script>
+  </body>
+</html>
