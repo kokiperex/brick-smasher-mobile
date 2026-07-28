@@ -1159,7 +1159,7 @@
       this.showOverlay(
         "PARTIDA EN PAUSA",
         "PAUSA",
-        `Nivel ${level} · ${this.lives} vidas · ${score} puntos`,
+        `Nivel ${level} · ${this.lives} vidas\n${score} puntos`,
         "CONTINUAR",
       );
       this.overlay.classList.add("screen-overlay--pause");
