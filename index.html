@@ -28,7 +28,7 @@
         </div>
         <div class="hud-stat hud-stat--lives">
           <span class="hud-label">VIDAS</span>
-          <strong id="livesValue" aria-label="3 vidas">● ● ●</strong>
+          <strong id="livesValue" aria-label="3 vidas">♥ ♥ ♥</strong>
         </div>
         <button
           id="settingsButton"
@@ -82,14 +82,24 @@
           aria-labelledby="overlayTitle"
           aria-describedby="overlayMessage"
         >
-          <div class="panel">
+          <div id="overlayPanel" class="panel">
             <p id="overlayEyebrow" class="panel-eyebrow">ARCADE MÓVIL</p>
             <h1 id="overlayTitle">NEON<br>BREAKER</h1>
             <p id="overlayMessage">
               Rompe todos los bloques.<br>
               Desliza para mover la plataforma.
             </p>
-            <button id="overlayButton" class="primary-button" type="button">JUGAR</button>
+            <div class="overlay-actions">
+              <button id="overlayButton" class="primary-button" type="button">JUGAR</button>
+              <button
+                id="restartLevelButton"
+                class="secondary-button"
+                type="button"
+                hidden
+              >
+                REINICIAR NIVEL
+              </button>
+            </div>
           </div>
         </div>
 
