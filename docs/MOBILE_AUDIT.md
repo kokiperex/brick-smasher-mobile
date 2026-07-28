@@ -12,9 +12,9 @@ panel de ajustes.
 | 375 × 667 | Vertical | 359 × 589 | Sin scroll, recortes ni controles fuera del área |
 | 390 × 844 | Vertical | 374 × 766 | Sin scroll, recortes ni controles fuera del área |
 | 430 × 932 | Vertical | 414 × 854 | Sin scroll, recortes ni controles fuera del área |
-| 844 × 390 | Horizontal | 625 × 374 | HUD lateral y panel inicial completo |
+| 844 × 390 | Horizontal | — | Bloqueo de orientación en móvil; escritorio conserva horizontal |
 
-En los cinco casos el tamaño del documento coincide con el viewport y
+En los cuatro casos verticales el tamaño del documento coincide con el viewport y
 `scrollX`/`scrollY` permanecen en cero. También se intentó desplazar la página
 sobre el Canvas y no se produjo scroll.
 
@@ -39,9 +39,10 @@ sobre el Canvas y no se produjo scroll.
 ### Orientación
 
 - Se eliminó el mínimo de 480 px que recortaba `844 × 390`.
-- En horizontal el HUD pasa a una columna lateral y la pantalla inicial usa
-  espaciado y tipografía compactos.
-- El botón **JUGAR** y el panel completo quedan dentro del viewport.
+- En móvil horizontal se muestra **GIRA TU DISPOSITIVO** y no se permite jugar.
+- La partida se pausa al girar y se reanuda al volver a vertical.
+- En escritorio horizontal se conserva el HUD lateral y la pantalla inicial
+  compacta.
 
 ### Pérdida de foco
 

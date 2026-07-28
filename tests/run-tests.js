@@ -15,6 +15,7 @@ const NeonBreakerGame = require("../js/game.js");
 const GameLoop = require("../js/game-loop.js");
 const InputManager = require("../js/input-manager.js");
 const LevelManager = require("../js/level-manager.js");
+const OrientationManager = require("../js/orientation-manager.js");
 const Paddle = require("../js/paddle.js");
 const Projectile = require("../js/projectile.js");
 const StorageManager = require("../js/storage-manager.js");
@@ -554,6 +555,81 @@ test("los controles invertidos reflejan la coordenada horizontal", () => {
   assert.equal(InputManager.relativeDelta(20, 0, false), 0);
 });
 
+test("OrientationManager bloquea horizontal solo en móviles", () => {
+  const listeners = new Map();
+  const classes = new Set();
+  const root = {
+    innerWidth: 844,
+    innerHeight: 390,
+    navigator: { userAgent: "Mozilla/5.0 (iPhone)", maxTouchPoints: 5 },
+    document: {
+      documentElement: {
+        classList: {
+          toggle(name, active) {
+            if (active) classes.add(name);
+            else classes.delete(name);
+          },
+          remove(name) {
+            classes.delete(name);
+          },
+        },
+      },
+    },
+    addEventListener(name, callback) {
+      listeners.set(name, callback);
+    },
+    removeEventListener(name, callback) {
+      if (listeners.get(name) === callback) listeners.delete(name);
+    },
+  };
+  const element = {
+    hidden: true,
+    attributes: {},
+    setAttribute(name, value) {
+      this.attributes[name] = value;
+    },
+  };
+  const game = {
+    state: "playing",
+    pauses: 0,
+    resumes: 0,
+    pause() {
+      this.pauses += 1;
+      this.state = "paused";
+    },
+    resume() {
+      this.resumes += 1;
+      this.state = "playing";
+    },
+  };
+  const manager = new OrientationManager({ game, element, eventRoot: root });
+  assert.equal(manager.isBlocked(), true);
+  assert.equal(element.hidden, false);
+  assert.equal(classes.has("mobile-landscape-blocked"), true);
+  assert.equal(game.pauses, 1);
+
+  root.innerWidth = 390;
+  root.innerHeight = 844;
+  listeners.get("orientationchange")();
+  assert.equal(element.hidden, true);
+  assert.equal(game.resumes, 1);
+  manager.destroy();
+  assert.equal(listeners.size, 0);
+});
+
+test("OrientationManager no bloquea orientación horizontal en escritorio", () => {
+  const root = {
+    innerWidth: 844,
+    innerHeight: 390,
+    navigator: { userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X)", maxTouchPoints: 0 },
+    document: { documentElement: { classList: { toggle() {}, remove() {} } } },
+    addEventListener() {},
+    removeEventListener() {},
+  };
+  assert.equal(OrientationManager.isMobile(root), false);
+  assert.equal(new OrientationManager({ eventRoot: root }).isBlocked(), false);
+});
+
 test("el control relativo mueve por desplazamiento sin saltar al tocar", () => {
   const listeners = new Map();
   const canvas = {
@@ -803,6 +879,7 @@ test("la base PWA declara manifiesto, iconos locales y rutas compatibles con Git
   assert.equal(isRelativeLocalPath(manifest.start_url), true);
   assert.equal(isRelativeLocalPath(manifest.scope), true);
   assert.equal(manifest.display, "standalone");
+  assert.equal(manifest.orientation, "portrait");
   assert.equal(manifest.theme_color, "#071326");
   assert.equal(manifest.background_color, "#030916");
 
@@ -836,6 +913,7 @@ test("la base PWA declara manifiesto, iconos locales y rutas compatibles con Git
     new RegExp(`<link rel="icon"[^>]+href="${icon512.src}">`),
   );
   assert.match(html, /<link rel="apple-touch-icon" href="assets\/icons\/icon-192\.png">/);
+  assert.match(html, /id="mobileOrientationLock"/);
 });
 
 test("la base PWA precachea los recursos de inicio y registra el worker sin navegador", () => {
@@ -903,6 +981,7 @@ test("la base PWA precachea los recursos de inicio y registra el worker sin nave
   }
 
   assert.match(main, /"serviceWorker" in navigator/);
+  assert.match(main, /new window\.OrientationManager\(\{[\s\S]*?orientationLock/);
   assert.match(main, /const isLocalhost = \[/);
   assert.match(main, /window\.location\.protocol !== "https:" && !isLocalhost/);
   assert.match(main, /new URL\("\.\.\/service-worker\.js", currentScriptUrl\)/);

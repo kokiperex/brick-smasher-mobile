@@ -14,7 +14,8 @@ dependencias externas ni proceso de compilación.
 
 ## Alcance implementado
 
-- Canvas responsive para orientación vertical y horizontal.
+- Canvas responsive; en móviles el juego se restringe a orientación vertical y
+  en escritorio conserva orientación vertical y horizontal.
 - Pantalla de inicio.
 - Plataforma controlable con touch, mouse, flechas y teclas A/D.
 - Modos de control táctil directo y relativo con preferencia guardada.
@@ -124,7 +125,7 @@ Ejecuta desde la raíz del proyecto:
 node tests/run-tests.js
 ```
 
-La suite de 58 pruebas comprueba los 40 niveles, bloques rompibles, patrones duplicados,
+La suite de 72 pruebas comprueba los 40 niveles, bloques rompibles, patrones duplicados,
 fórmula y curva de dificultad, construcción de bloques, progresión de
 velocidad, colisiones, reflexión, rebote en la plataforma,
 velocidad de lanzamiento, condición de fin de nivel, paso fijo del loop y

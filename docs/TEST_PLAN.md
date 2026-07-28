@@ -47,6 +47,7 @@ La suite debe validar:
 21. El menú de pausa presenta las acciones **Continuar** y **Reiniciar nivel**.
 22. Reiniciar desde pausa restablece el nivel actual, elimina efectos, objetos y proyectiles, y conserva puntuación y vidas.
 23. El selector de nivel desde pausa permite todos los niveles desbloqueados hasta el actual, incluido el no finalizado; una selección válida inicia con tres vidas y puntuación cero.
+24. En móviles, horizontal muestra el bloqueo de orientación y pausa `playing`/`ready`; al volver a vertical reanuda sólo la partida pausada por el bloqueo. En escritorio, horizontal sigue disponible.
 
 ## Manual desde debug
 
@@ -94,6 +95,8 @@ Probar `320×568`, `375×667`, `390×844`, `430×932` y `844×390`:
 - el contexto de audio no debe crearse antes de una interacción;
 - ocultar la pestaña o perder el foco debe pausar;
 - `?debug=1` debe mostrar un FPS finito.
+- En un móvil, rotar a `844×390` debe mostrar **GIRA TU DISPOSITIVO** y pausar la partida; volver a vertical debe retirar el aviso y reanudarla.
+- En escritorio, `844×390` debe conservar el juego funcional sin mostrar el bloqueo.
 
 La evidencia dimensional y las correcciones se documentan en
 `docs/MOBILE_AUDIT.md`.
