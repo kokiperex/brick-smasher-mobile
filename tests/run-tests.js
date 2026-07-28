@@ -208,6 +208,7 @@ test("CollisionSystem calcula el rebote según el punto de impacto", () => {
 
 test("la bola se lanza con velocidad válida hacia arriba", () => {
   const ball = new Ball();
+  assert.equal(ball.radius, 9);
   const launched = ball.launch();
   assert.equal(launched, true);
   assert.equal(ball.attached, false);
