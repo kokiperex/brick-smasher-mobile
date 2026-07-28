@@ -2,7 +2,7 @@
   "use strict";
 
   const CACHE_PREFIX = "neon-breaker-static-";
-  const CACHE_VERSION = "v4";
+  const CACHE_VERSION = "v5";
   const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
   const PRECACHE_PATHS = Object.freeze([
     "./",
@@ -29,6 +29,7 @@
     "./js/storage-manager.js",
     "./js/game-loop.js",
     "./js/game.js",
+    "./js/orientation-manager.js",
     "./js/main.js",
   ]);
   const resolveFromScope = (relativePath) => new URL(

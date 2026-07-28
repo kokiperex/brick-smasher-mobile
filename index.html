@@ -199,6 +199,21 @@
       </div>
     </main>
 
+    <div
+      id="mobileOrientationLock"
+      class="mobile-orientation-lock"
+      hidden
+      aria-hidden="true"
+      role="status"
+      aria-live="polite"
+    >
+      <div class="mobile-orientation-lock__panel">
+        <span class="mobile-orientation-lock__icon" aria-hidden="true">↻</span>
+        <h2>GIRA TU DISPOSITIVO</h2>
+        <p>Neon Breaker sólo está disponible en modo vertical en móviles.</p>
+      </div>
+    </div>
+
     <aside id="debugPanel" class="debug-panel" aria-label="Panel de depuración de efectos" hidden>
       <strong>DEBUG · OBJETOS</strong>
       <p>Generar sobre la plataforma:</p>
@@ -223,6 +238,7 @@
     <script src="js/storage-manager.js"></script>
     <script src="js/game-loop.js"></script>
     <script src="js/game.js"></script>
+    <script src="js/orientation-manager.js"></script>
     <script src="js/main.js"></script>
   </body>
 </html>

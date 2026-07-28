@@ -61,9 +61,15 @@
     debugPanel: document.getElementById("debugPanel"),
     debugButtons: document.getElementById("debugButtons"),
     debugStatus: document.getElementById("debugStatus"),
+    orientationLock: document.getElementById("mobileOrientationLock"),
   };
 
   window.neonBreaker?.destroy?.();
   window.neonBreaker = new window.NeonBreakerGame(elements);
+  window.neonBreakerOrientation?.destroy?.();
+  window.neonBreakerOrientation = new window.OrientationManager({
+    game: window.neonBreaker,
+    element: elements.orientationLock,
+  });
   registerOfflineSupport();
 })();

@@ -284,6 +284,50 @@ canvas:focus-visible {
   display: none;
 }
 
+.mobile-orientation-lock {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  background: #030916;
+  text-align: center;
+}
+
+.mobile-orientation-lock[hidden] {
+  display: none;
+}
+
+.mobile-orientation-lock__panel {
+  width: min(100%, 360px);
+  padding: 28px 24px;
+  border: 2px solid #2ee6ff;
+  background: #071a32;
+  box-shadow: 0 0 28px rgba(46, 230, 255, 0.3);
+}
+
+.mobile-orientation-lock__icon {
+  display: block;
+  color: #ff69bc;
+  font-size: 3.5rem;
+  line-height: 1;
+}
+
+.mobile-orientation-lock h2 {
+  margin: 18px 0 12px;
+  color: #62e7ff;
+  font-size: clamp(1.15rem, 6vw, 1.65rem);
+}
+
+.mobile-orientation-lock p {
+  margin: 0;
+  color: #d5f8ff;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
 .settings-card {
   width: min(100%, 360px);
   max-height: 100%;
