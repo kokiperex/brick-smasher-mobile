@@ -3,7 +3,7 @@
 
   class Ball {
     constructor() {
-      this.radius = 7;
+      this.radius = 9;
       this.speed = 260;
       this.x = 0;
       this.y = 0;
