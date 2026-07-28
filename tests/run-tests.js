@@ -757,6 +757,19 @@ test("el HUD conserva sus datos en español y controles accesibles sin duplicado
   assert.match(css, /\.icon-button--settings[\s\S]*?width:\s*46px/);
   assert.match(css, /#pauseButton\.icon-button--resume \.hud-icon--pause-bars/);
   assert.match(css, /#pauseButton\.icon-button--resume \.hud-icon--resume/);
+  assert.match(
+    css,
+    /\.panel--pause \.overlay-actions > button[\s\S]*?width:\s*min\(100%, 210px\)[\s\S]*?min-width:\s*0[\s\S]*?min-height:\s*44px/,
+  );
+  assert.match(
+    css,
+    /\.panel--pause > #overlayMessage[\s\S]*?white-space:\s*pre-line/,
+  );
+  const pauseMessage = fs.readFileSync(path.join(projectRoot, "js/game.js"), "utf8");
+  assert.match(
+    pauseMessage,
+    /`Nivel \$\{level\} · \$\{this\.lives\} vidas\\n\$\{score\} puntos`/,
+  );
   assert.match(css, /button:focus-visible,[\s\S]*?outline:\s*3px solid #62e7ff/);
   assert.match(css, /button\s*\{[\s\S]*?min-width:\s*44px[\s\S]*?min-height:\s*44px/);
 });
