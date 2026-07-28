@@ -679,6 +679,25 @@ test("los controles de teclado mueven y lanzan sin desplazar la página", () => 
   assert.deepEqual(prevented, ["ArrowLeft", " "]);
 });
 
+test("el icono de pausa alterna entre barras y reanudar sin usar texto", () => {
+  const changes = [];
+  const fakeGame = {
+    pauseButton: {
+      setAttribute: (name, value) => changes.push([name, value]),
+      classList: { toggle: (name, value) => changes.push([name, value]) },
+    },
+  };
+
+  NeonBreakerGame.prototype.setPauseButtonPresentation.call(fakeGame, false);
+  NeonBreakerGame.prototype.setPauseButtonPresentation.call(fakeGame, true);
+  assert.deepEqual(changes, [
+    ["aria-label", "Pausar partida"],
+    ["icon-button--resume", false],
+    ["aria-label", "Reanudar partida"],
+    ["icon-button--resume", true],
+  ]);
+});
+
 test("los diálogos y avisos de efectos tienen semántica accesible estable", () => {
   const html = fs.readFileSync(path.join(projectRoot, "index.html"), "utf8");
   const ids = [...html.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
@@ -696,6 +715,50 @@ test("los diálogos y avisos de efectos tienen semántica accesible estable", ()
     /id="effectsPanel"[^>]*aria-live/,
   );
   assert.match(html, /id="restartLevelButton"[\s\S]*?>[\s\S]*?REINICIAR NIVEL/);
+  assert.match(html, /id="chooseLevelButton"[\s\S]*?>[\s\S]*?ELEGIR NIVEL/);
+  assert.match(html, /id="backToPauseButton"[\s\S]*?>[\s\S]*?VOLVER/);
+  assert.match(html, /id="levelGrid"[^>]*role="list"/);
+});
+
+test("el HUD conserva sus datos en español y controles accesibles sin duplicados", () => {
+  const html = fs.readFileSync(path.join(projectRoot, "index.html"), "utf8");
+  const css = fs.readFileSync(path.join(projectRoot, "css/styles.css"), "utf8");
+  const hudMatch = html.match(/<header class="hud"[\s\S]*?<\/header>/);
+  assert.ok(hudMatch, "Falta el encabezado del HUD");
+  const hud = hudMatch[0];
+
+  for (const [label, valueId] of [
+    ["PUNTOS", "scoreValue"],
+    ["NIVEL", "levelValue"],
+    ["VIDAS", "livesValue"],
+  ]) {
+    assert.match(hud, new RegExp(`>${label}<`));
+    assert.match(hud, new RegExp(`id="${valueId}"`));
+    assert.equal((hud.match(new RegExp(`>${label}<`, "g")) || []).length, 1);
+  }
+
+  assert.match(
+    hud,
+    /id="settingsButton"[\s\S]*?aria-label="Abrir ajustes"[\s\S]*?aria-controls="settingsPanel"/,
+  );
+  assert.match(hud, /id="pauseButton"[\s\S]*?aria-label="Pausar partida"[\s\S]*?disabled/);
+  assert.equal((hud.match(/id="settingsButton"/g) || []).length, 1);
+  assert.equal((hud.match(/id="pauseButton"/g) || []).length, 1);
+  assert.match(hud, /class="hud-icon hud-icon--settings"/);
+  assert.match(hud, /M111 37h34v17c6 1 12 4 17 7l12-12 24 24/);
+  assert.match(hud, /<circle cx="128" cy="119" r="34"/);
+  assert.match(hud, /class="hud-icon hud-icon--pause-bars"/);
+  assert.match(hud, /class="hud-icon hud-icon--resume"/);
+  assert.doesNotMatch(hud, />⚙</);
+  assert.doesNotMatch(hud, />Ⅱ</);
+  assert.match(css, /\.hud-stat \+ \.hud-stat[\s\S]*?border-left:\s*1px solid #28d7ed/);
+  assert.match(css, /\.hud-actions[\s\S]*?grid-template-columns:\s*46px 52px/);
+  assert.match(css, /\.icon-button--pause[\s\S]*?width:\s*52px/);
+  assert.match(css, /\.icon-button--settings[\s\S]*?width:\s*46px/);
+  assert.match(css, /#pauseButton\.icon-button--resume \.hud-icon--pause-bars/);
+  assert.match(css, /#pauseButton\.icon-button--resume \.hud-icon--resume/);
+  assert.match(css, /button:focus-visible,[\s\S]*?outline:\s*3px solid #62e7ff/);
+  assert.match(css, /button\s*\{[\s\S]*?min-width:\s*44px[\s\S]*?min-height:\s*44px/);
 });
 
 test("index.html conserva todas sus dependencias locales ejecutables", () => {
@@ -1007,6 +1070,15 @@ test("StorageManager valida y conserva el progreso de la campaña", () => {
   });
 });
 
+test("StorageManager limita el progreso corrupto sin desbloquear niveles", () => {
+  const manager = new StorageManager({
+    getItem: () => JSON.stringify({ maxUnlockedLevel: "invalid", lastGame: { levelIndex: 12 } }),
+    setItem: () => {},
+    removeItem: () => {},
+  });
+  assert.equal(manager.readProgress(40).maxUnlockedLevel, 1);
+});
+
 test("StorageManager no bloquea el inicio cuando localStorage lanza SecurityError", () => {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
   Object.defineProperty(globalThis, "localStorage", {
@@ -1128,8 +1200,9 @@ test("pausar muestra su menú, detiene el render continuo y reanudar lo reactiva
     launchHint: { hidden: false },
     pauseButton: {
       setAttribute: (name, value) => calls.push([name, value]),
-      firstElementChild: { textContent: "" },
+      classList: { toggle: (name, value) => calls.push([name, value]) },
     },
+    setPauseButtonPresentation: (isPaused) => calls.push(["pause-presentation", isPaused]),
     showPauseMenu: () => calls.push("pause-menu"),
     hideOverlay: () => calls.push("hide"),
     saveProgress: () => calls.push("save"),
@@ -1168,6 +1241,77 @@ test("reiniciar desde pausa recarga el nivel actual y no altera vidas ni puntuac
   assert.deepEqual(calls, ["load-level"]);
 });
 
+test("los niveles elegibles incluyen el actual y bloquean los posteriores", () => {
+  const fakeGame = {
+    levelManager: { total: 40 },
+    progress: { maxUnlockedLevel: 5 },
+    levelIndex: 2,
+  };
+  assert.deepEqual(NeonBreakerGame.prototype.selectableLevelIndices.call(fakeGame), [0, 1, 2, 3, 4]);
+  assert.equal(NeonBreakerGame.prototype.canSelectLevel.call({
+    ...fakeGame,
+    state: "paused",
+  }, 0), true);
+  assert.equal(NeonBreakerGame.prototype.canSelectLevel.call({
+    ...fakeGame,
+    state: "paused",
+  }, 2), true);
+  assert.equal(NeonBreakerGame.prototype.canSelectLevel.call({
+    ...fakeGame,
+    state: "paused",
+  }, 4), true);
+  assert.equal(NeonBreakerGame.prototype.canSelectLevel.call({
+    ...fakeGame,
+    state: "paused",
+  }, 5), false);
+  assert.equal(NeonBreakerGame.prototype.canSelectLevel.call({
+    ...fakeGame,
+    state: "playing",
+  }, 0), false);
+});
+
+test("elegir un nivel disponible lo reinicia con tres vidas y puntuación cero", () => {
+  const calls = [];
+  const fakeGame = {
+    state: "paused",
+    levelIndex: 3,
+    score: 8420,
+    lives: 1,
+    progress: { maxUnlockedLevel: 6 },
+    levelManager: {
+      total: 40,
+      goTo: (index) => {
+        calls.push(["go-to", index]);
+        return true;
+      },
+    },
+    loadLevel: () => calls.push("load-level"),
+  };
+  fakeGame.canSelectLevel = (index) => (
+    NeonBreakerGame.prototype.canSelectLevel.call(fakeGame, index)
+  );
+  assert.equal(NeonBreakerGame.prototype.selectLevel.call(fakeGame, 1), true);
+  assert.equal(fakeGame.score, 0);
+  assert.equal(fakeGame.lives, 3);
+  assert.deepEqual(calls, [["go-to", 1], "load-level"]);
+  assert.equal(NeonBreakerGame.prototype.selectLevel.call(fakeGame, 3), true);
+  assert.equal(NeonBreakerGame.prototype.selectLevel.call(fakeGame, 6), false);
+});
+
+test("game over permite continuar el nivel actual con tres vidas", () => {
+  const calls = [];
+  const fakeGame = {
+    state: "gameOver",
+    score: 1770,
+    lives: 0,
+    loadLevel: () => calls.push("load-level"),
+  };
+  assert.equal(NeonBreakerGame.prototype.restartGameOverLevel.call(fakeGame), true);
+  assert.equal(fakeGame.score, 0);
+  assert.equal(fakeGame.lives, 3);
+  assert.deepEqual(calls, ["load-level"]);
+});
+
 test("recargar un nivel limpia sus efectos y deja una bola lista para lanzar", () => {
   const calls = [];
   const fakeBall = { attached: true };
@@ -1194,8 +1338,9 @@ test("recargar un nivel limpia sus efectos y deja una bola lista para lanzar", (
     pauseButton: {
       disabled: true,
       setAttribute: () => calls.push("pause-label"),
-      firstElementChild: { textContent: "▶" },
+      classList: { toggle: (name, value) => calls.push([name, value]) },
     },
+    setPauseButtonPresentation: (isPaused) => calls.push(["pause-presentation", isPaused]),
     updateLaunchHint: () => calls.push("launch-hint"),
     updateHud: () => calls.push("hud"),
     updateEffectsHud: () => calls.push("effects-hud"),
@@ -1211,7 +1356,7 @@ test("recargar un nivel limpia sus efectos y deja una bola lista para lanzar", (
   assert.deepEqual(fakeGame.bricks, ["brick-a", "brick-b"]);
   assert.equal(fakeGame.state, "ready");
   assert.equal(fakeGame.pauseButton.disabled, false);
-  assert.equal(fakeGame.pauseButton.firstElementChild.textContent, "Ⅱ");
+  assert.ok(calls.some((call) => Array.isArray(call) && call[0] === "pause-presentation" && call[1] === false));
   assert.ok(calls.includes("clear-effects"));
   assert.ok(calls.includes("hide-overlay"));
   assert.ok(calls.includes("start-loop"));

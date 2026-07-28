@@ -29,6 +29,11 @@
       this.overlayMessage = elements.overlayMessage;
       this.overlayButton = elements.overlayButton;
       this.restartLevelButton = elements.restartLevelButton;
+      this.chooseLevelButton = elements.chooseLevelButton;
+      this.backToPauseButton = elements.backToPauseButton;
+      this.levelSelector = elements.levelSelector;
+      this.levelSelectorStatus = elements.levelSelectorStatus;
+      this.levelGrid = elements.levelGrid;
       this.launchHint = elements.launchHint;
       this.effectsPanel = elements.effectsPanel;
       this.effectAnnouncements = elements.effectAnnouncements;
@@ -53,6 +58,7 @@
       this.view = { scale: 1, offsetX: 0, offsetY: 0, dpr: 1 };
       this.random = Math.random;
       this.settingsReturnState = null;
+      this.levelSelectorReturnState = null;
       this.keyboardDirection = { left: false, right: false };
       this.destroyed = false;
 
@@ -141,6 +147,25 @@
           this.audioManager.play("ui");
           this.restartCurrentLevel();
         },
+        chooseLevelClick: () => {
+          this.audioManager.unlock();
+          this.audioManager.play("ui");
+          this.showLevelSelector();
+        },
+        backToPauseClick: () => {
+          this.audioManager.unlock();
+          this.audioManager.play("ui");
+          this.returnFromLevelSelector();
+        },
+        levelGridClick: (event) => {
+          const button = event.target.closest("button[data-level-index]");
+          if (!button || !this.levelGrid.contains(button)) {
+            return;
+          }
+          this.audioManager.unlock();
+          this.audioManager.play("ui");
+          this.selectLevel(Number(button.dataset.levelIndex));
+        },
         settingsClick: () => this.openSettings(),
         closeSettingsClick: () => this.closeSettings(),
         controlModeClick: () => this.toggleControlMode(),
@@ -176,6 +201,9 @@
       const handlers = this.interfaceHandlers;
       this.overlayButton.addEventListener("click", handlers.overlayClick);
       this.restartLevelButton.addEventListener("click", handlers.restartLevelClick);
+      this.chooseLevelButton.addEventListener("click", handlers.chooseLevelClick);
+      this.backToPauseButton.addEventListener("click", handlers.backToPauseClick);
+      this.levelGrid.addEventListener("click", handlers.levelGridClick);
       this.pauseButton.addEventListener("click", handlers.pauseClick);
       this.settingsButton.addEventListener("click", handlers.settingsClick);
       this.closeSettingsButton.addEventListener("click", handlers.closeSettingsClick);
@@ -194,6 +222,9 @@
       const handlers = this.interfaceHandlers;
       this.overlayButton.removeEventListener("click", handlers.overlayClick);
       this.restartLevelButton.removeEventListener("click", handlers.restartLevelClick);
+      this.chooseLevelButton.removeEventListener("click", handlers.chooseLevelClick);
+      this.backToPauseButton.removeEventListener("click", handlers.backToPauseClick);
+      this.levelGrid.removeEventListener("click", handlers.levelGridClick);
       this.pauseButton.removeEventListener("click", handlers.pauseClick);
       this.settingsButton.removeEventListener("click", handlers.settingsClick);
       this.closeSettingsButton.removeEventListener("click", handlers.closeSettingsClick);
@@ -471,7 +502,11 @@
         this.startNewGame(true);
         return;
       }
-      if (this.state === "gameOver" || this.state === "finished") {
+      if (this.state === "gameOver") {
+        this.restartGameOverLevel();
+        return;
+      }
+      if (this.state === "finished") {
         this.startNewGame(false);
         return;
       }
@@ -510,8 +545,7 @@
       this.gameLoop.start();
       this.hideOverlay();
       this.pauseButton.disabled = false;
-      this.pauseButton.setAttribute("aria-label", "Pausar partida");
-      this.pauseButton.firstElementChild.textContent = "Ⅱ";
+      this.setPauseButtonPresentation(false);
       this.updateLaunchHint();
       this.updateHud();
       this.updateEffectsHud(true);
@@ -573,6 +607,14 @@
       this.launchHint.hidden = !canLaunch;
     }
 
+    setPauseButtonPresentation(isPaused) {
+      this.pauseButton.setAttribute(
+        "aria-label",
+        isPaused ? "Reanudar partida" : "Pausar partida",
+      );
+      this.pauseButton.classList.toggle("icon-button--resume", isPaused);
+    }
+
     togglePause() {
       if (this.state === "playing" || this.state === "ready") {
         this.pause();
@@ -585,8 +627,7 @@
       this.previousState = this.state;
       this.state = "paused";
       this.launchHint.hidden = true;
-      this.pauseButton.setAttribute("aria-label", "Reanudar partida");
-      this.pauseButton.firstElementChild.textContent = "▶";
+      this.setPauseButtonPresentation(true);
       this.showPauseMenu();
       this.saveProgress();
       this.gameLoop.stop();
@@ -596,8 +637,7 @@
       this.state = this.previousState;
       this.hideOverlay();
       this.updateLaunchHint();
-      this.pauseButton.setAttribute("aria-label", "Pausar partida");
-      this.pauseButton.firstElementChild.textContent = "Ⅱ";
+      this.setPauseButtonPresentation(false);
       this.gameLoop.start();
     }
 
@@ -605,6 +645,45 @@
       if (this.state !== "paused") {
         return false;
       }
+      this.loadLevel();
+      return true;
+    }
+
+    selectableLevelIndices() {
+      const availableCount = Math.max(1, Math.min(
+        this.levelManager.total,
+        this.progress?.maxUnlockedLevel || 1,
+      ));
+      return Array.from({ length: availableCount }, (_, index) => index);
+    }
+
+    canSelectLevel(index) {
+      return (this.state === "paused" || this.state === "gameOver")
+        && Number.isInteger(index)
+        && index >= 0
+        && index < this.levelManager.total
+        && index < (this.progress?.maxUnlockedLevel || 1);
+    }
+
+    selectLevel(index) {
+      if (!this.canSelectLevel(index)) {
+        return false;
+      }
+      if (!this.levelManager.goTo(index)) {
+        return false;
+      }
+      this.score = 0;
+      this.lives = 3;
+      this.loadLevel();
+      return true;
+    }
+
+    restartGameOverLevel() {
+      if (this.state !== "gameOver") {
+        return false;
+      }
+      this.score = 0;
+      this.lives = 3;
       this.loadLevel();
       return true;
     }
@@ -952,16 +1031,17 @@
       if (this.lives <= 0) {
         this.clearLevelEffects();
         this.state = "gameOver";
-        this.saveProgress({ lastGame: null });
+        this.saveProgress({
+          lastGame: {
+            levelIndex: this.levelIndex,
+            score: 0,
+            lives: 3,
+          },
+        });
         this.pauseButton.disabled = true;
         this.launchHint.hidden = true;
         this.gameLoop.stop();
-        this.showOverlay(
-          "SIN VIDAS",
-          "GAME OVER",
-          `Puntuación final: ${this.score.toString().padStart(6, "0")}`,
-          "REINTENTAR",
-        );
+        this.showGameOverMenu();
         return;
       }
 
@@ -1056,7 +1136,12 @@
     showOverlay(eyebrow, title, message, buttonText) {
       this.overlay.classList.remove("screen-overlay--pause");
       this.overlayPanel.classList.remove("panel--pause");
+      this.overlayButton.hidden = false;
       this.restartLevelButton.hidden = true;
+      this.chooseLevelButton.hidden = true;
+      this.backToPauseButton.hidden = true;
+      this.levelSelector.hidden = true;
+      this.levelGrid.replaceChildren();
       this.overlayEyebrow.textContent = eyebrow;
       const isLongSingleWord = !title.includes(" ") && Array.from(title).length > 8;
       this.overlayTitle.classList.toggle("panel-title--compact", isLongSingleWord);
@@ -1080,6 +1165,62 @@
       this.overlay.classList.add("screen-overlay--pause");
       this.overlayPanel.classList.add("panel--pause");
       this.restartLevelButton.hidden = false;
+      this.chooseLevelButton.hidden = false;
+    }
+
+    showGameOverMenu() {
+      this.showOverlay(
+        "SIN VIDAS",
+        "GAME OVER",
+        `Puntuación final: ${this.score.toString().padStart(6, "0")}`,
+        "CONTINUAR NIVEL",
+      );
+      this.chooseLevelButton.hidden = false;
+    }
+
+    showLevelSelector() {
+      if (this.state !== "paused" && this.state !== "gameOver") {
+        return false;
+      }
+      const available = this.selectableLevelIndices();
+      this.levelSelectorReturnState = this.state;
+      this.overlayEyebrow.textContent = this.state === "paused"
+        ? "PARTIDA EN PAUSA"
+        : "SIN VIDAS";
+      this.overlayTitle.textContent = "ELEGIR NIVEL";
+      this.overlayTitle.classList.add("panel-title--compact");
+      this.overlayMessage.textContent = `Nivel actual: ${this.levelIndex + 1}`;
+      this.overlayButton.hidden = true;
+      this.restartLevelButton.hidden = true;
+      this.chooseLevelButton.hidden = true;
+      this.backToPauseButton.hidden = false;
+      this.levelSelector.hidden = false;
+      this.levelSelectorStatus.textContent = "Niveles disponibles";
+      this.levelGrid.replaceChildren(...available.map((index) => {
+        const button = root.document.createElement("button");
+        button.type = "button";
+        button.className = "level-select-button";
+        if (index === this.levelIndex) {
+          button.classList.add("level-select-button--current");
+          button.setAttribute("aria-current", "true");
+        }
+        button.dataset.levelIndex = String(index);
+        button.setAttribute("role", "listitem");
+        button.setAttribute("aria-label", `Jugar nivel ${index + 1}`);
+        button.textContent = `NIVEL ${index + 1}`;
+        return button;
+      }));
+      this.levelGrid.querySelector("button")?.focus({ preventScroll: true });
+      return true;
+    }
+
+    returnFromLevelSelector() {
+      if (this.levelSelectorReturnState === "gameOver") {
+        this.showGameOverMenu();
+      } else {
+        this.showPauseMenu();
+      }
+      this.levelSelectorReturnState = null;
     }
 
     hideOverlay() {
@@ -1087,6 +1228,10 @@
       this.overlay.classList.remove("screen-overlay--pause");
       this.overlayPanel.classList.remove("panel--pause");
       this.restartLevelButton.hidden = true;
+      this.chooseLevelButton.hidden = true;
+      this.backToPauseButton.hidden = true;
+      this.levelSelector.hidden = true;
+      this.levelGrid.replaceChildren();
       this.setOverlayIsolation(false);
     }
 

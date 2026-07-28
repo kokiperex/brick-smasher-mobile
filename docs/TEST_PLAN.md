@@ -46,6 +46,7 @@ La suite debe validar:
 20. Validación, persistencia y fallo seguro de localStorage.
 21. El menú de pausa presenta las acciones **Continuar** y **Reiniciar nivel**.
 22. Reiniciar desde pausa restablece el nivel actual, elimina efectos, objetos y proyectiles, y conserva puntuación y vidas.
+23. El selector de nivel desde pausa permite todos los niveles desbloqueados hasta el actual, incluido el no finalizado; una selección válida inicia con tres vidas y puntuación cero.
 
 ## Manual desde debug
 
@@ -66,6 +67,14 @@ Durante una partida, pulsar pausa y comprobar que el panel muestra el nivel,
 vidas y puntos actuales. Pulsar **Reiniciar nivel**: la bola debe volver adherida,
 los bloques deben reaparecer y los efectos, cápsulas y proyectiles deben desaparecer,
 sin alterar la puntuación ni las vidas.
+
+Después de finalizar al menos un nivel, pulsar **Elegir nivel** en pausa: deben
+aparecer los niveles desbloqueados hasta el actual, incluido el nivel aún no
+finalizado, mientras que los posteriores permanecen bloqueados. Elegir un nivel
+disponible debe limpiar la partida anterior, mostrar tres vidas, reiniciar la
+puntuación y dejar la bola adherida. Tras un **GAME OVER**, **Continuar nivel**
+debe reiniciar el nivel actual con tres vidas, y **Elegir nivel** debe ofrecer la
+misma lista. **Volver** debe restaurar el menú anterior sin iniciar un nivel.
 
 Volver a generar un efecto debe restaurar su duración completa. Finalmente,
 activar varios efectos y pulsar **Completar nivel**: el HUD de efectos, las
