@@ -23,10 +23,12 @@
       this.vibrationButton = elements.vibrationButton;
       this.closeSettingsButton = elements.closeSettingsButton;
       this.overlay = elements.overlay;
+      this.overlayPanel = elements.overlayPanel;
       this.overlayEyebrow = elements.overlayEyebrow;
       this.overlayTitle = elements.overlayTitle;
       this.overlayMessage = elements.overlayMessage;
       this.overlayButton = elements.overlayButton;
+      this.restartLevelButton = elements.restartLevelButton;
       this.launchHint = elements.launchHint;
       this.effectsPanel = elements.effectsPanel;
       this.effectAnnouncements = elements.effectAnnouncements;
@@ -134,6 +136,11 @@
           this.audioManager.play("ui");
           this.togglePause();
         },
+        restartLevelClick: () => {
+          this.audioManager.unlock();
+          this.audioManager.play("ui");
+          this.restartCurrentLevel();
+        },
         settingsClick: () => this.openSettings(),
         closeSettingsClick: () => this.closeSettings(),
         controlModeClick: () => this.toggleControlMode(),
@@ -168,6 +175,7 @@
     bindInterfaceEvents() {
       const handlers = this.interfaceHandlers;
       this.overlayButton.addEventListener("click", handlers.overlayClick);
+      this.restartLevelButton.addEventListener("click", handlers.restartLevelClick);
       this.pauseButton.addEventListener("click", handlers.pauseClick);
       this.settingsButton.addEventListener("click", handlers.settingsClick);
       this.closeSettingsButton.addEventListener("click", handlers.closeSettingsClick);
@@ -185,6 +193,7 @@
     unbindInterfaceEvents() {
       const handlers = this.interfaceHandlers;
       this.overlayButton.removeEventListener("click", handlers.overlayClick);
+      this.restartLevelButton.removeEventListener("click", handlers.restartLevelClick);
       this.pauseButton.removeEventListener("click", handlers.pauseClick);
       this.settingsButton.removeEventListener("click", handlers.settingsClick);
       this.closeSettingsButton.removeEventListener("click", handlers.closeSettingsClick);
@@ -578,7 +587,7 @@
       this.launchHint.hidden = true;
       this.pauseButton.setAttribute("aria-label", "Reanudar partida");
       this.pauseButton.firstElementChild.textContent = "▶";
-      this.showOverlay("EN PAUSA", "PAUSA", "La partida está detenida.", "CONTINUAR");
+      this.showPauseMenu();
       this.saveProgress();
       this.gameLoop.stop();
     }
@@ -590,6 +599,14 @@
       this.pauseButton.setAttribute("aria-label", "Pausar partida");
       this.pauseButton.firstElementChild.textContent = "Ⅱ";
       this.gameLoop.start();
+    }
+
+    restartCurrentLevel() {
+      if (this.state !== "paused") {
+        return false;
+      }
+      this.loadLevel();
+      return true;
     }
 
     update(deltaSeconds) {
@@ -1037,6 +1054,9 @@
     }
 
     showOverlay(eyebrow, title, message, buttonText) {
+      this.overlay.classList.remove("screen-overlay--pause");
+      this.overlayPanel.classList.remove("panel--pause");
+      this.restartLevelButton.hidden = true;
       this.overlayEyebrow.textContent = eyebrow;
       const isLongSingleWord = !title.includes(" ") && Array.from(title).length > 8;
       this.overlayTitle.classList.toggle("panel-title--compact", isLongSingleWord);
@@ -1048,15 +1068,32 @@
       this.overlayButton.focus({ preventScroll: true });
     }
 
+    showPauseMenu() {
+      const level = this.levelIndex + 1;
+      const score = this.score.toString().padStart(6, "0");
+      this.showOverlay(
+        "PARTIDA EN PAUSA",
+        "PAUSA",
+        `Nivel ${level} · ${this.lives} vidas · ${score} puntos`,
+        "CONTINUAR",
+      );
+      this.overlay.classList.add("screen-overlay--pause");
+      this.overlayPanel.classList.add("panel--pause");
+      this.restartLevelButton.hidden = false;
+    }
+
     hideOverlay() {
       this.overlay.hidden = true;
+      this.overlay.classList.remove("screen-overlay--pause");
+      this.overlayPanel.classList.remove("panel--pause");
+      this.restartLevelButton.hidden = true;
       this.setOverlayIsolation(false);
     }
 
     updateHud() {
       this.scoreElement.textContent = this.score.toString().padStart(6, "0");
       this.levelElement.textContent = `${this.levelIndex + 1} / ${this.levelManager.total}`;
-      this.livesElement.textContent = Array.from({ length: Math.max(this.lives, 0) }, () => "●").join(" ");
+      this.livesElement.textContent = Array.from({ length: Math.max(this.lives, 0) }, () => "♥").join(" ");
       this.livesElement.setAttribute("aria-label", `${this.lives} vidas`);
     }
 
@@ -1253,6 +1290,7 @@
         context.restore();
       }
     }
+
   }
 
   root.NeonBreakerGame = NeonBreakerGame;
