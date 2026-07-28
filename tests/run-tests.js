@@ -696,6 +696,9 @@ test("los diálogos y avisos de efectos tienen semántica accesible estable", ()
     /id="effectsPanel"[^>]*aria-live/,
   );
   assert.match(html, /id="restartLevelButton"[\s\S]*?>[\s\S]*?REINICIAR NIVEL/);
+  assert.match(html, /id="chooseLevelButton"[\s\S]*?>[\s\S]*?ELEGIR NIVEL/);
+  assert.match(html, /id="backToPauseButton"[\s\S]*?>[\s\S]*?VOLVER/);
+  assert.match(html, /id="levelGrid"[^>]*role="list"/);
 });
 
 test("index.html conserva todas sus dependencias locales ejecutables", () => {
@@ -1007,6 +1010,15 @@ test("StorageManager valida y conserva el progreso de la campaña", () => {
   });
 });
 
+test("StorageManager limita el progreso corrupto sin desbloquear niveles", () => {
+  const manager = new StorageManager({
+    getItem: () => JSON.stringify({ maxUnlockedLevel: "invalid", lastGame: { levelIndex: 12 } }),
+    setItem: () => {},
+    removeItem: () => {},
+  });
+  assert.equal(manager.readProgress(40).maxUnlockedLevel, 1);
+});
+
 test("StorageManager no bloquea el inicio cuando localStorage lanza SecurityError", () => {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
   Object.defineProperty(globalThis, "localStorage", {
@@ -1165,6 +1177,77 @@ test("reiniciar desde pausa recarga el nivel actual y no altera vidas ni puntuac
 
   fakeGame.state = "playing";
   assert.equal(NeonBreakerGame.prototype.restartCurrentLevel.call(fakeGame), false);
+  assert.deepEqual(calls, ["load-level"]);
+});
+
+test("los niveles elegibles incluyen el actual y bloquean los posteriores", () => {
+  const fakeGame = {
+    levelManager: { total: 40 },
+    progress: { maxUnlockedLevel: 5 },
+    levelIndex: 2,
+  };
+  assert.deepEqual(NeonBreakerGame.prototype.selectableLevelIndices.call(fakeGame), [0, 1, 2, 3, 4]);
+  assert.equal(NeonBreakerGame.prototype.canSelectLevel.call({
+    ...fakeGame,
+    state: "paused",
+  }, 0), true);
+  assert.equal(NeonBreakerGame.prototype.canSelectLevel.call({
+    ...fakeGame,
+    state: "paused",
+  }, 2), true);
+  assert.equal(NeonBreakerGame.prototype.canSelectLevel.call({
+    ...fakeGame,
+    state: "paused",
+  }, 4), true);
+  assert.equal(NeonBreakerGame.prototype.canSelectLevel.call({
+    ...fakeGame,
+    state: "paused",
+  }, 5), false);
+  assert.equal(NeonBreakerGame.prototype.canSelectLevel.call({
+    ...fakeGame,
+    state: "playing",
+  }, 0), false);
+});
+
+test("elegir un nivel disponible lo reinicia con tres vidas y puntuación cero", () => {
+  const calls = [];
+  const fakeGame = {
+    state: "paused",
+    levelIndex: 3,
+    score: 8420,
+    lives: 1,
+    progress: { maxUnlockedLevel: 6 },
+    levelManager: {
+      total: 40,
+      goTo: (index) => {
+        calls.push(["go-to", index]);
+        return true;
+      },
+    },
+    loadLevel: () => calls.push("load-level"),
+  };
+  fakeGame.canSelectLevel = (index) => (
+    NeonBreakerGame.prototype.canSelectLevel.call(fakeGame, index)
+  );
+  assert.equal(NeonBreakerGame.prototype.selectLevel.call(fakeGame, 1), true);
+  assert.equal(fakeGame.score, 0);
+  assert.equal(fakeGame.lives, 3);
+  assert.deepEqual(calls, [["go-to", 1], "load-level"]);
+  assert.equal(NeonBreakerGame.prototype.selectLevel.call(fakeGame, 3), true);
+  assert.equal(NeonBreakerGame.prototype.selectLevel.call(fakeGame, 6), false);
+});
+
+test("game over permite continuar el nivel actual con tres vidas", () => {
+  const calls = [];
+  const fakeGame = {
+    state: "gameOver",
+    score: 1770,
+    lives: 0,
+    loadLevel: () => calls.push("load-level"),
+  };
+  assert.equal(NeonBreakerGame.prototype.restartGameOverLevel.call(fakeGame), true);
+  assert.equal(fakeGame.score, 0);
+  assert.equal(fakeGame.lives, 3);
   assert.deepEqual(calls, ["load-level"]);
 });
 

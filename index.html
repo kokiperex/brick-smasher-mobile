@@ -89,6 +89,10 @@
               Rompe todos los bloques.<br>
               Desliza para mover la plataforma.
             </p>
+            <section id="levelSelector" class="level-selector" aria-label="Niveles finalizados" hidden>
+              <p id="levelSelectorStatus" class="level-selector-status"></p>
+              <div id="levelGrid" class="level-grid" role="list"></div>
+            </section>
             <div class="overlay-actions">
               <button id="overlayButton" class="primary-button" type="button">JUGAR</button>
               <button
@@ -98,6 +102,12 @@
                 hidden
               >
                 REINICIAR NIVEL
+              </button>
+              <button id="chooseLevelButton" class="secondary-button" type="button" hidden>
+                ELEGIR NIVEL
+              </button>
+              <button id="backToPauseButton" class="secondary-button" type="button" hidden>
+                VOLVER
               </button>
             </div>
           </div>
