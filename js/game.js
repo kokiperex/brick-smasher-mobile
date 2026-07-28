@@ -545,8 +545,7 @@
       this.gameLoop.start();
       this.hideOverlay();
       this.pauseButton.disabled = false;
-      this.pauseButton.setAttribute("aria-label", "Pausar partida");
-      this.pauseButton.firstElementChild.textContent = "Ⅱ";
+      this.setPauseButtonPresentation(false);
       this.updateLaunchHint();
       this.updateHud();
       this.updateEffectsHud(true);
@@ -608,6 +607,14 @@
       this.launchHint.hidden = !canLaunch;
     }
 
+    setPauseButtonPresentation(isPaused) {
+      this.pauseButton.setAttribute(
+        "aria-label",
+        isPaused ? "Reanudar partida" : "Pausar partida",
+      );
+      this.pauseButton.classList.toggle("icon-button--resume", isPaused);
+    }
+
     togglePause() {
       if (this.state === "playing" || this.state === "ready") {
         this.pause();
@@ -620,8 +627,7 @@
       this.previousState = this.state;
       this.state = "paused";
       this.launchHint.hidden = true;
-      this.pauseButton.setAttribute("aria-label", "Reanudar partida");
-      this.pauseButton.firstElementChild.textContent = "▶";
+      this.setPauseButtonPresentation(true);
       this.showPauseMenu();
       this.saveProgress();
       this.gameLoop.stop();
@@ -631,8 +637,7 @@
       this.state = this.previousState;
       this.hideOverlay();
       this.updateLaunchHint();
-      this.pauseButton.setAttribute("aria-label", "Pausar partida");
-      this.pauseButton.firstElementChild.textContent = "Ⅱ";
+      this.setPauseButtonPresentation(false);
       this.gameLoop.start();
     }
 

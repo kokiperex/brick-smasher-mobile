@@ -18,11 +18,11 @@
   <body>
     <main class="app-shell">
       <header class="hud" aria-label="Estado de la partida">
-        <div class="hud-stat">
+        <div class="hud-stat hud-stat--score">
           <span class="hud-label">PUNTOS</span>
           <strong id="scoreValue">000000</strong>
         </div>
-        <div class="hud-stat hud-stat--center">
+        <div class="hud-stat hud-stat--level">
           <span class="hud-label">NIVEL</span>
           <strong id="levelValue">1 / 40</strong>
         </div>
@@ -30,19 +30,54 @@
           <span class="hud-label">VIDAS</span>
           <strong id="livesValue" aria-label="3 vidas">♥ ♥ ♥</strong>
         </div>
-        <button
-          id="settingsButton"
-          class="icon-button"
-          type="button"
-          aria-label="Abrir ajustes"
+        <div class="hud-actions" aria-label="Acciones de la partida">
+          <button
+            id="settingsButton"
+            class="icon-button icon-button--settings"
+            type="button"
+            aria-label="Abrir ajustes"
           aria-controls="settingsPanel"
           aria-expanded="false"
-        >
-          <span aria-hidden="true">⚙</span>
-        </button>
-        <button id="pauseButton" class="icon-button" type="button" aria-label="Pausar partida" disabled>
-          <span aria-hidden="true">Ⅱ</span>
-        </button>
+          >
+            <svg
+              class="hud-icon hud-icon--settings"
+              viewBox="0 0 256 256"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                d="M111 37h34v17c6 1 12 4 17 7l12-12 24 24-12 12c3 5 6 11 7 17h17v34h-17c-1 6-4 12-7 17l12 12-24 24-12-12c-5 3-11 6-17 7v17h-34v-17c-6-1-12-4-17-7l-12 12-24-24 12-12c-3-5-6-11-7-17H46V102h17c1-6 4-12 7-17L58 73l24-24 12 12c5-3 11-6 17-7V37Z"
+                stroke-linejoin="round"
+              />
+              <circle cx="128" cy="119" r="34" fill="#061629" stroke="#B8F8FF" stroke-width="8" />
+            </svg>
+          </button>
+          <button
+            id="pauseButton"
+            class="icon-button icon-button--pause"
+            type="button"
+          aria-label="Pausar partida"
+          disabled
+          >
+            <svg
+              class="hud-icon hud-icon--pause-bars"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <rect x="4" y="3" width="6" height="18" />
+              <rect x="14" y="3" width="6" height="18" />
+            </svg>
+            <svg
+              class="hud-icon hud-icon--resume"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M7 4.5 19 12 7 19.5V4.5Z" />
+            </svg>
+          </button>
+        </div>
       </header>
 
       <section id="gameStage" class="game-stage" aria-label="Área de juego">
