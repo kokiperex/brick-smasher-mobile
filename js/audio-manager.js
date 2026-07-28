@@ -10,6 +10,7 @@
     penalty: Object.freeze({ frequency: 150, duration: 0.14, type: "sawtooth", volume: 0.04 }),
     fire: Object.freeze({ frequency: 920, duration: 0.045, type: "square", volume: 0.025 }),
     life: Object.freeze({ frequency: 110, duration: 0.28, type: "sawtooth", volume: 0.05 }),
+    extraLife: Object.freeze({ frequency: 1040, duration: 0.3, type: "triangle", volume: 0.055 }),
     complete: Object.freeze({ frequency: 880, duration: 0.32, type: "triangle", volume: 0.05 }),
   });
 

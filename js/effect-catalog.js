@@ -101,8 +101,17 @@
 
   const effectMap = new Map(EFFECTS.map((effect) => [effect.id, effect]));
 
+  const LIFE_REWARD = Object.freeze({
+    id: "life",
+    type: "life",
+    name: "Vida extra",
+    icon: "♥",
+    duration: 0,
+    behavior: Object.freeze({ kind: "extra-life" }),
+  });
+
   function get(id) {
-    return effectMap.get(id) || null;
+    return effectMap.get(id) || (id === LIFE_REWARD.id ? LIFE_REWARD : null);
   }
 
   function randomId(random = Math.random, type = null) {
@@ -115,7 +124,7 @@
     return candidates[Math.floor(random() * candidates.length)].id;
   }
 
-  const api = { EFFECTS, get, randomId };
+  const api = { EFFECTS, LIFE_REWARD, get, randomId };
   root.EffectCatalog = api;
   if (typeof module !== "undefined" && module.exports) {
     module.exports = api;

@@ -80,8 +80,14 @@
             0,
           ),
           score: clampInteger(source.lastGame.score, 0, 999999999, 0),
-          lives: clampInteger(source.lastGame.lives, 1, 3, 3),
+          lives: clampInteger(source.lastGame.lives, 1, 5, 3),
         };
+        if (Object.prototype.hasOwnProperty.call(source.lastGame, "lifeRewardClaimed")) {
+          lastGame.lifeRewardClaimed = source.lastGame.lifeRewardClaimed === true;
+        }
+        if (Object.prototype.hasOwnProperty.call(source.lastGame, "perfectEligible")) {
+          lastGame.perfectEligible = source.lastGame.perfectEligible !== false;
+        }
       }
       return {
         version: PROGRESS_VERSION,

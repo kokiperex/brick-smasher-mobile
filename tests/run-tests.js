@@ -1079,8 +1079,73 @@ test("StorageManager valida y conserva el progreso de la campaña", () => {
     version: 1,
     maxUnlockedLevel: 40,
     highScore: 0,
-    lastGame: { levelIndex: 39, score: 0, lives: 3 },
+    lastGame: { levelIndex: 39, score: 0, lives: 5 },
   });
+});
+
+test("las vidas extra respetan el rango inicial y el máximo de cinco", () => {
+  const values = new Map();
+  const manager = new StorageManager({
+    getItem: (key) => values.get(key) ?? null,
+    setItem: (key, value) => values.set(key, value),
+    removeItem: () => {},
+  });
+  manager.writeProgress({
+    maxUnlockedLevel: 1,
+    highScore: 0,
+    lastGame: { levelIndex: 0, score: 0, lives: 99 },
+  }, 40);
+  assert.equal(manager.readProgress(40).lastGame.lives, 5);
+});
+
+test("el bloque dorado solo puede existir en niveles intermedios", () => {
+  assert.equal(NeonBreakerGame.prototype.isGoldenLifeLevel.call({ levelIndex: 0 }), false);
+  assert.equal(NeonBreakerGame.prototype.isGoldenLifeLevel.call({ levelIndex: 5 }), true);
+  assert.equal(NeonBreakerGame.prototype.isGoldenLifeLevel.call({ levelIndex: 29 }), true);
+  assert.equal(NeonBreakerGame.prototype.isGoldenLifeLevel.call({ levelIndex: 30 }), false);
+});
+
+test("recoger una vida extra incrementa una sola vez y nunca supera cinco", () => {
+  const calls = [];
+  const fakeGame = {
+    lives: 4,
+    lifeRewardClaimed: false,
+    audioManager: { play: (cue) => calls.push(["audio", cue]) },
+    vibrationManager: { pulse: (pattern) => calls.push(["vibration", pattern]) },
+    updateHud: () => calls.push("hud"),
+    announceEffect: (message) => calls.push(["announce", message]),
+    saveProgress: () => calls.push("save"),
+  };
+  assert.equal(NeonBreakerGame.prototype.giveExtraLife.call(fakeGame, "Encontrada"), true);
+  assert.equal(fakeGame.lives, 5);
+  assert.equal(NeonBreakerGame.prototype.giveExtraLife.call(fakeGame, "Encontrada"), false);
+  assert.equal(fakeGame.lives, 5);
+
+  fakeGame.lives = 5;
+  fakeGame.lifeRewardClaimed = false;
+  assert.equal(NeonBreakerGame.prototype.giveExtraLife.call(fakeGame, "Perfecto"), false);
+  assert.equal(fakeGame.lives, 5);
+});
+
+test("perder una vida invalida el premio de nivel perfecto", () => {
+  const fakeGame = {
+    lives: 2,
+    perfectEligible: true,
+    lifeRewardClaimed: false,
+    audioManager: { play: () => {} },
+    vibrationManager: { pulse: () => {} },
+    updateHud: () => {},
+    clearLevelEffects: () => {},
+    paddle: { reset: () => {} },
+    createBall: () => ({ attached: true }),
+    updateLaunchHint: () => {},
+    updateEffectsHud: () => {},
+    saveProgress: () => {},
+    state: "playing",
+  };
+  NeonBreakerGame.prototype.loseLife.call(fakeGame);
+  assert.equal(fakeGame.lives, 1);
+  assert.equal(fakeGame.perfectEligible, false);
 });
 
 test("StorageManager limita el progreso corrupto sin desbloquear niveles", () => {

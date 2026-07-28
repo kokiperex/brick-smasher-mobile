@@ -4,6 +4,11 @@
   const WORLD_WIDTH = 360;
   const WORLD_HEIGHT = 600;
   const MAX_BALLS = 5;
+  const INITIAL_LIVES = 3;
+  const MAX_LIVES = 5;
+  const GOLDEN_LIFE_BLOCK_MIN_LEVEL = 6;
+  const GOLDEN_LIFE_BLOCK_MAX_LEVEL = 30;
+  const GOLDEN_LIFE_DROP_CHANCE = 0.35;
 
   class NeonBreakerGame {
     constructor(elements) {
@@ -45,7 +50,9 @@
       this.state = "start";
       this.previousState = "ready";
       this.score = 0;
-      this.lives = 3;
+      this.lives = INITIAL_LIVES;
+      this.perfectEligible = true;
+      this.lifeRewardClaimed = false;
       this.bricks = [];
       this.balls = [];
       this.projectiles = [];
@@ -512,6 +519,8 @@
       }
       if (this.state === "levelComplete") {
         this.levelManager.next();
+        this.perfectEligible = true;
+        this.lifeRewardClaimed = false;
         this.loadLevel();
         return;
       }
@@ -523,9 +532,13 @@
     startNewGame(resumeSavedGame = false) {
       const savedGame = resumeSavedGame ? this.progress.lastGame : null;
       this.score = savedGame?.score ?? 0;
-      this.lives = savedGame?.lives ?? 3;
+      this.lives = Math.max(1, Math.min(MAX_LIVES, savedGame?.lives ?? INITIAL_LIVES));
+      this.perfectEligible = savedGame?.perfectEligible !== false;
+      this.lifeRewardClaimed = savedGame?.lifeRewardClaimed === true;
       if (!savedGame || !this.levelManager.goTo(savedGame.levelIndex)) {
         this.levelManager.reset();
+        this.perfectEligible = true;
+        this.lifeRewardClaimed = false;
       }
       this.loadLevel();
     }
@@ -570,6 +583,8 @@
           levelIndex: this.levelIndex,
           score: this.score,
           lives: this.lives,
+          lifeRewardClaimed: this.lifeRewardClaimed,
+          perfectEligible: this.perfectEligible,
         };
       }
       this.storageManager.writeProgress(this.progress, this.levelManager.total);
@@ -673,7 +688,9 @@
         return false;
       }
       this.score = 0;
-      this.lives = 3;
+      this.lives = INITIAL_LIVES;
+      this.perfectEligible = true;
+      this.lifeRewardClaimed = false;
       this.loadLevel();
       return true;
     }
@@ -683,7 +700,8 @@
         return false;
       }
       this.score = 0;
-      this.lives = 3;
+      this.lives = INITIAL_LIVES;
+      this.perfectEligible = true;
       this.loadLevel();
       return true;
     }
@@ -835,7 +853,17 @@
 
       const level = this.levelManager.current;
       const dropRoll = this.random();
-      if (brick.type === "surprise") {
+      const isGoldenLifeBlock = brick.type === "surprise"
+        && (this.isGoldenLifeLevel?.() === true);
+      if (isGoldenLifeBlock) {
+        if (dropRoll < GOLDEN_LIFE_DROP_CHANCE) {
+          this.fallingObjectSystem.spawn(
+            "life",
+            brick.x + brick.width / 2,
+            brick.y + brick.height / 2,
+          );
+        }
+      } else if (brick.type === "surprise") {
         this.fallingObjectSystem.spawnRandom(
           brick.x + brick.width / 2,
           brick.y + brick.height / 2,
@@ -907,6 +935,9 @@
       const definition = root.EffectCatalog.get(effectId);
       if (!definition) {
         return false;
+      }
+      if (definition.behavior.kind === "extra-life") {
+        return this.giveExtraLife("Vida extra encontrada");
       }
       this.audioManager.play(definition.type);
       this.vibrationManager.pulse(definition.type === "prize" ? 14 : [18, 24, 18]);
@@ -1023,8 +1054,36 @@
       this.updateEffectsHud(true);
     }
 
+    isGoldenLifeLevel() {
+      const levelNumber = this.levelIndex + 1;
+      return levelNumber >= GOLDEN_LIFE_BLOCK_MIN_LEVEL
+        && levelNumber <= GOLDEN_LIFE_BLOCK_MAX_LEVEL;
+    }
+
+    giveExtraLife(source) {
+      if (this.lifeRewardClaimed) {
+        return false;
+      }
+      this.lifeRewardClaimed = true;
+      const awarded = this.lives < MAX_LIVES;
+      if (awarded) {
+        this.lives = Math.min(MAX_LIVES, this.lives + 1);
+        this.audioManager.play("extraLife");
+        this.vibrationManager.pulse([12, 24, 12]);
+      }
+      this.updateHud();
+      this.announceEffect(
+        awarded
+          ? `${source}: +1 vida (${this.lives}/${MAX_LIVES}).`
+          : `${source}: máximo de ${MAX_LIVES} vidas alcanzado.`,
+      );
+      this.saveProgress();
+      return awarded;
+    }
+
     loseLife() {
       this.lives -= 1;
+      this.perfectEligible = false;
       this.audioManager.play("life");
       this.vibrationManager.pulse([35, 30, 35]);
       this.updateHud();
@@ -1035,7 +1094,9 @@
           lastGame: {
             levelIndex: this.levelIndex,
             score: 0,
-            lives: 3,
+            lives: INITIAL_LIVES,
+            lifeRewardClaimed: this.lifeRewardClaimed,
+            perfectEligible: false,
           },
         });
         this.pauseButton.disabled = true;
@@ -1054,6 +1115,8 @@
     }
 
     completeLevel() {
+      const perfect = this.perfectEligible;
+      const awardedPerfectLife = perfect && this.giveExtraLife("Nivel perfecto");
       this.clearLevelEffects();
       this.audioManager.play("complete");
       this.vibrationManager.pulse([20, 35, 20, 35, 30]);
@@ -1068,7 +1131,9 @@
           "FASE 1 COMPLETADA",
           "¡BIEN HECHO!",
           `Superaste los ${this.levelManager.total} niveles con `
-            + `${this.score.toString().padStart(6, "0")} puntos.`,
+            + `${this.score.toString().padStart(6, "0")} puntos.`
+            + (perfect ? "\n¡Nivel perfecto!" : "")
+            + (awardedPerfectLife ? "\n+1 vida" : ""),
           "JUGAR DE NUEVO",
         );
         return;
@@ -1090,7 +1155,9 @@
       this.showOverlay(
         `NIVEL ${this.levelIndex + 1}`,
         "COMPLETADO",
-        `Puntuación: ${this.score.toString().padStart(6, "0")}`,
+        `Puntuación: ${this.score.toString().padStart(6, "0")}`
+          + (perfect ? "\n¡Nivel perfecto!" : "")
+          + (awardedPerfectLife ? " · +1 vida" : ""),
         "SIGUIENTE NIVEL",
       );
     }
@@ -1238,8 +1305,8 @@
     updateHud() {
       this.scoreElement.textContent = this.score.toString().padStart(6, "0");
       this.levelElement.textContent = `${this.levelIndex + 1} / ${this.levelManager.total}`;
-      this.livesElement.textContent = Array.from({ length: Math.max(this.lives, 0) }, () => "♥").join(" ");
-      this.livesElement.setAttribute("aria-label", `${this.lives} vidas`);
+      this.livesElement.textContent = `${Array.from({ length: Math.max(this.lives, 0) }, () => "♥").join(" ")} · ${this.lives}/${MAX_LIVES}`;
+      this.livesElement.setAttribute("aria-label", `${this.lives} de ${MAX_LIVES} vidas`);
     }
 
     render() {
@@ -1310,7 +1377,8 @@
         if (!brick.alive) {
           continue;
         }
-        context.fillStyle = brick.color;
+        const goldenLifeBlock = brick.type === "surprise" && this.isGoldenLifeLevel();
+        context.fillStyle = goldenLifeBlock ? "#d79a16" : brick.color;
         context.fillRect(brick.x, brick.y, brick.width, brick.height);
         context.fillStyle = "rgba(255,255,255,0.28)";
         context.fillRect(brick.x + 1, brick.y + 1, brick.width - 2, 3);
@@ -1321,7 +1389,7 @@
           brick.width - 2,
           3,
         );
-        context.strokeStyle = "rgba(255,255,255,0.36)";
+        context.strokeStyle = goldenLifeBlock ? "#fff1a8" : "rgba(255,255,255,0.36)";
         if (brick.type === "boss") {
           context.strokeStyle = ["#ffffff", "#ffe25f", "#ff5c9a"][brick.phase - 1] || "#ffffff";
           context.lineWidth = 2;
@@ -1329,7 +1397,7 @@
           context.lineWidth = 1;
         }
         context.strokeRect(brick.x + 0.5, brick.y + 0.5, brick.width - 1, brick.height - 1);
-        const label = typeLabels[brick.type];
+        const label = goldenLifeBlock ? "♥" : typeLabels[brick.type];
         if (label) {
           const remaining = brick.maxHitPoints > 1 && brick.breakable
             ? `${label}${brick.hitPoints}`
@@ -1350,23 +1418,24 @@
 
     drawFallingItems(context) {
       for (const item of this.fallingObjectSystem.items) {
-        const isPrize = item.definition.type === "prize";
+        const isLife = item.effectId === "life";
+        const isPrize = item.definition.type === "prize" || isLife;
         context.save();
-        context.shadowColor = isPrize ? "#4fffd0" : "#ff4d83";
+        context.shadowColor = isLife ? "#ffd84d" : (isPrize ? "#4fffd0" : "#ff4d83");
         context.shadowBlur = 10;
-        context.fillStyle = isPrize ? "#0f8f84" : "#8d1747";
+        context.fillStyle = isLife ? "#a66a00" : (isPrize ? "#0f8f84" : "#8d1747");
         context.beginPath();
         context.roundRect(item.x, item.y, item.width, item.height, 6);
         context.fill();
         context.shadowBlur = 0;
-        context.strokeStyle = isPrize ? "#a8ffe8" : "#ffc0d5";
+        context.strokeStyle = isLife ? "#fff1a8" : (isPrize ? "#a8ffe8" : "#ffc0d5");
         context.strokeRect(item.x + 0.5, item.y + 0.5, item.width - 1, item.height - 1);
         context.fillStyle = "#ffffff";
         context.font = "bold 12px Courier New";
         context.textAlign = "center";
         context.textBaseline = "middle";
         context.fillText(
-          `${isPrize ? "+" : "!"}${item.definition.icon}`,
+          isLife ? "+1♥" : `${isPrize ? "+" : "!"}${item.definition.icon}`,
           item.x + item.width / 2,
           item.y + item.height / 2 + 1,
         );
