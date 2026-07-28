@@ -44,6 +44,8 @@ La suite debe validar:
 18. Recuperación después de `lostpointercapture` y escalas transitorias.
 19. Flechas, A/D y Espacio.
 20. Validación, persistencia y fallo seguro de localStorage.
+21. El menú de pausa presenta las acciones **Continuar** y **Reiniciar nivel**.
+22. Reiniciar desde pausa restablece el nivel actual, elimina efectos, objetos y proyectiles, y conserva puntuación y vidas.
 
 ## Manual desde debug
 
@@ -59,6 +61,11 @@ Abrir `index.html?debug=1`, pulsar cada generador y comprobar:
 - `↔`: el movimiento horizontal se invierte.
 - `O`: el campo se oscurece sin ocultar las bolas.
 - `R`: la plataforma adquiere inercia.
+
+Durante una partida, pulsar pausa y comprobar que el panel muestra el nivel,
+vidas y puntos actuales. Pulsar **Reiniciar nivel**: la bola debe volver adherida,
+los bloques deben reaparecer y los efectos, cápsulas y proyectiles deben desaparecer,
+sin alterar la puntuación ni las vidas.
 
 Volver a generar un efecto debe restaurar su duración completa. Finalmente,
 activar varios efectos y pulsar **Completar nivel**: el HUD de efectos, las

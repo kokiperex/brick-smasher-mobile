@@ -694,6 +694,7 @@ test("los diálogos y avisos de efectos tienen semántica accesible estable", ()
     html,
     /id="effectsPanel"[^>]*aria-live/,
   );
+  assert.match(html, /id="restartLevelButton"[\s\S]*?>[\s\S]*?REINICIAR NIVEL/);
 });
 
 test("index.html conserva todas sus dependencias locales ejecutables", () => {
@@ -1118,7 +1119,7 @@ test("la destrucción del juego es completa e idempotente", () => {
   ]);
 });
 
-test("pausar detiene el render continuo y reanudar lo reactiva", () => {
+test("pausar muestra su menú, detiene el render continuo y reanudar lo reactiva", () => {
   const calls = [];
   const fakeGame = {
     state: "ready",
@@ -1128,7 +1129,7 @@ test("pausar detiene el render continuo y reanudar lo reactiva", () => {
       setAttribute: (name, value) => calls.push([name, value]),
       firstElementChild: { textContent: "" },
     },
-    showOverlay: () => calls.push("overlay"),
+    showPauseMenu: () => calls.push("pause-menu"),
     hideOverlay: () => calls.push("hide"),
     saveProgress: () => calls.push("save"),
     updateLaunchHint: () => calls.push("hint"),
@@ -1140,10 +1141,79 @@ test("pausar detiene el render continuo y reanudar lo reactiva", () => {
 
   NeonBreakerGame.prototype.pause.call(fakeGame);
   assert.equal(fakeGame.state, "paused");
+  assert.ok(calls.includes("pause-menu"));
   assert.ok(calls.includes("stop"));
   NeonBreakerGame.prototype.resume.call(fakeGame);
   assert.equal(fakeGame.state, "ready");
   assert.ok(calls.includes("start"));
+});
+
+test("reiniciar desde pausa recarga el nivel actual y no altera vidas ni puntuación", () => {
+  const calls = [];
+  const fakeGame = {
+    state: "paused",
+    score: 2840,
+    lives: 2,
+    loadLevel: () => calls.push("load-level"),
+  };
+
+  assert.equal(NeonBreakerGame.prototype.restartCurrentLevel.call(fakeGame), true);
+  assert.equal(fakeGame.score, 2840);
+  assert.equal(fakeGame.lives, 2);
+  assert.deepEqual(calls, ["load-level"]);
+
+  fakeGame.state = "playing";
+  assert.equal(NeonBreakerGame.prototype.restartCurrentLevel.call(fakeGame), false);
+  assert.deepEqual(calls, ["load-level"]);
+});
+
+test("recargar un nivel limpia sus efectos y deja una bola lista para lanzar", () => {
+  const calls = [];
+  const fakeBall = { attached: true };
+  const fakeGame = {
+    clearLevelEffects: () => calls.push("clear-effects"),
+    levelManager: {
+      current: { ballSpeed: 280, paddleWidth: 96 },
+      createBricks: () => ["brick-a", "brick-b"],
+    },
+    paddle: {
+      baseWidth: 0,
+      restoreDefaults: () => calls.push("restore-paddle"),
+      reset: () => calls.push("reset-paddle"),
+    },
+    createBall: (attached) => {
+      calls.push(["create-ball", attached]);
+      return fakeBall;
+    },
+    gameLoop: {
+      resetClock: () => calls.push("reset-clock"),
+      start: () => calls.push("start-loop"),
+    },
+    hideOverlay: () => calls.push("hide-overlay"),
+    pauseButton: {
+      disabled: true,
+      setAttribute: () => calls.push("pause-label"),
+      firstElementChild: { textContent: "▶" },
+    },
+    updateLaunchHint: () => calls.push("launch-hint"),
+    updateHud: () => calls.push("hud"),
+    updateEffectsHud: () => calls.push("effects-hud"),
+    canvas: { focus: () => calls.push("focus") },
+    saveProgress: () => calls.push("save"),
+  };
+
+  NeonBreakerGame.prototype.loadLevel.call(fakeGame);
+  assert.equal(fakeGame.baseBallSpeed, 280);
+  assert.equal(fakeGame.ballSpeedMultiplier, 1);
+  assert.equal(fakeGame.paddle.baseWidth, 96);
+  assert.deepEqual(fakeGame.balls, [fakeBall]);
+  assert.deepEqual(fakeGame.bricks, ["brick-a", "brick-b"]);
+  assert.equal(fakeGame.state, "ready");
+  assert.equal(fakeGame.pauseButton.disabled, false);
+  assert.equal(fakeGame.pauseButton.firstElementChild.textContent, "Ⅱ");
+  assert.ok(calls.includes("clear-effects"));
+  assert.ok(calls.includes("hide-overlay"));
+  assert.ok(calls.includes("start-loop"));
 });
 
 test("GameLoop separa actualizaciones fijas del render", () => {
